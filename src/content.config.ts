@@ -9,11 +9,15 @@ const blog = defineCollection({
 		z.object({
 			title: z.string(),
 			description: z.string(),
-			// Transform string to Date object
-			pubDate: z.coerce.date(),
+			// Accept either pubDate or date
+			pubDate: z.coerce.date().optional(),
+			date: z.coerce.date().optional(),
 			updatedDate: z.coerce.date().optional(),
 			heroImage: image().optional(),
-		}),
+		}).transform((data) => ({
+			...data,
+			pubDate: data.pubDate ?? data.date,
+		})),
 });
 
 export const collections = { blog };
