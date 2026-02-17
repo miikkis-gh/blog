@@ -12,7 +12,6 @@ allPosts = allPosts.sort((a, b) => new Date(b.data.publishDate).valueOf() - new 
 
 <BaseLayout title={title} description={description} permalink={permalink} current="blog">
   <div class="container">
-    <h1>Blog</h1>
     {allPosts.map((post, index) => {
       const href = `/blog/${post.data.slug}`;
       return (
@@ -34,6 +33,10 @@ allPosts = allPosts.sort((a, b) => new Date(b.data.publishDate).valueOf() - new 
 </BaseLayout>
 
 <style>
+  .container {
+    padding-top: 2em;
+  }
+
   h2,
   .post-item-footer {
     font-family: var(--font-family-sans);
