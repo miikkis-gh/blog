@@ -9,12 +9,9 @@ const permalink = `${Astro.site.href}about`;
 <BaseLayout title={title} description={description} permalink={permalink} current="about">
   <div class="container">
     <h1>About</h1>
-    <figure class="about-image">
+    <div class="about-image">
       <img src="/assets/about-illustration.webp" alt="Illustration of a gear" width="330">
-      <figcaption>
-        Illustration by <a href="https://icons8.com/illustrations/author/AJeVuFhkCuqC" target="_blank" rel="noopener">ekzi.letters Ouch!</a>
-      </figcaption>
-    </figure>
+    </div>
     <p>Hi, I'm <strong>miikkis</strong>. Software engineer writing about tech and side projects.</p>
     <p>See my work on <a href="https://www.github.com/miikkis-gh" target="_blank" rel="noopener">GitHub</a> or visit <a href="https://miikkis.fi" target="_blank" rel="noopener">miikkis.fi</a>.</p>
   </div>
