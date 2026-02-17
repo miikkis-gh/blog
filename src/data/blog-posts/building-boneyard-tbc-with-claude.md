@@ -7,7 +7,7 @@ description: How I used Claude Code and the Mechanic development hub to build Bo
 
 # Building a WoW TBC Classic Addon with Claude Code and Mechanic
 
-I recently built **BoneyardTBC**, a guild management addon for World of Warcraft TBC Classic Anniversary Edition, using [Claude Code](https://claude.ai/code) as my AI pair programmer and a custom development hub called **Mechanic** to streamline the feedback loop. This is the story of how that went.
+I recently built [**BoneyardTBC**](https://www.curseforge.com/wow/addons/boneyardtbc), a guild management addon for World of Warcraft TBC Classic Anniversary Edition, using [Claude Code](https://claude.ai/code) as my AI pair programmer and a custom development hub called [**Mechanic**](https://github.com/Falkicon/Mechanic) to streamline the feedback loop. This is the story of how that went.
 
 ---
 
@@ -28,7 +28,7 @@ The addon talks to itself over WoW's addon message channel (`GUILD`), so data pr
 
 ### Mechanic
 
-Mechanic is a local development hub I built alongside the addon. It consists of:
+[**Mechanic**](https://github.com/Falkicon/Mechanic) is a local development hub I built alongside the addon. It consists of:
 
 - A **Python CLI** (`mechanic`) for linting, formatting, testing, and releasing addons
 - An **MCP server** that exposes all of those tools to Claude Code directly
@@ -122,8 +122,8 @@ Claude reads these at the start of sessions and stays coherent across days of wo
 
 ## The Result
 
-BoneyardTBC is running in production for my guild on the Spineshatter-EU realm. The GearScore leaderboard, bulletin board, and officer analytics tabs are all actively used. The DungeonOptimizer is helping people plan their heroic rep grinds for T5 content.
+[**BoneyardTBC**](https://www.curseforge.com/wow/addons/boneyardtbc) is running in production for my guild on the Spineshatter-EU realm. The GearScore leaderboard, bulletin board, and officer analytics tabs are all actively used.
 
-The whole thing was built in roughly two weeks of evening sessions — much faster than I would have managed alone, and with a higher test coverage than any addon I've written before.
+The whole thing was built in roughly one week of evening sessions — much faster than I would have managed alone, and with a higher test coverage than any addon I've written before.
 
-If you're interested in the toolchain, Mechanic is the piece that made this possible. The combination of an in-game error bridge, a local API database, and MCP tool exposure to Claude turned addon development from a slow trial-and-error process into something that actually resembles normal software development.
+If you're interested in the toolchain, [**Mechanic**](https://github.com/Falkicon/Mechanic) is the piece that made this possible. The combination of an in-game error bridge, a local API database, and MCP tool exposure to Claude turned addon development from a slow trial-and-error process into something that actually resembles normal software development.
