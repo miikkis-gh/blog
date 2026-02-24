@@ -5,11 +5,9 @@ publishDate: 18 Feb 2026
 description: How I built a quick-access message overlay for WoW TBC Classic raid leaders — from message pools to a hand-built settings panel.
 ---
 
-# Building CommanderText — One-Click Raid Callouts for TBC Classic
+I've been spamming TBC heroics as a warrior tank. At the tempo these groups move, you don't have time to type. You're chain-pulling, tab-sundering, watching healer mana — and somewhere in there you need to tell the group to CC moon or hold DPS. Stopping to type means slowing the group down.
 
-I've been spamming TBC heroics as a warrior tank, and at the tempo these groups move, you don't have time to type. You're chain-pulling, tab-sundering, watching healer mana — and somewhere in between you need to tell the group to CC moon, hold DPS, or go all out. Stopping to type means slowing the group down.
-
-So I built [**CommanderText**](https://www.curseforge.com/wow/addons/commandertext) — a panel of buttons that sends the right message to the right channel in one click.
+So I built [**CommanderText**](https://www.curseforge.com/wow/addons/commandertext) — buttons that send the right message to the right channel in one click.
 
 ![CommanderText overlay showing message buttons and DBM pull timers](/assets/blog/wow/commandertext-overlay.webp)
 
@@ -17,17 +15,17 @@ So I built [**CommanderText**](https://www.curseforge.com/wow/addons/commanderte
 
 ## The Idea
 
-The concept is simple: a small overlay with message buttons that send text to party or raid chat. Left-click sends normally, right-click sends as a raid warning. The addon figures out which channel to use — raid if you're in a raid, party if you're in a party, say if you're solo.
+A small overlay with message buttons. Left-click sends to the appropriate chat. Right-click sends as a raid warning. The addon figures out the channel — raid if you're in a raid, party if you're in a party, say if you're solo.
 
-On top of that, I wanted DBM pull timer integration. Instead of typing `/pull 10` I wanted a row of buttons: Pull (10s), Pull (15s). One click.
+I also wanted DBM pull timer buttons. Instead of typing `/pull 10`, one click: Pull (10s), Pull (15s). Done.
 
-That's the whole addon. No data sync, no saved history, no complex state. Just buttons that send messages.
+That's the whole addon. No data sync, no saved history. Just buttons that send messages.
 
 ---
 
 ## Message Pools
 
-A single static message per button would get old fast — your group would see the exact same string 10 times in a dungeon run. So from the start, each button has a label (what you see on the button) and a **pool of 5 variations** (what actually gets sent):
+A static message per button gets old fast. Your group sees the same string 10 times in a dungeon run. So each button has a label and a **pool of 5 variations**:
 
 ```lua
 {
@@ -43,47 +41,46 @@ A single static message per button would get old fast — your group would see t
 }
 ```
 
-Every click picks a random variation from the pool. In r4 I added no-repeat logic — it tracks the last sent index on the message object so you never get the same phrase twice in a row. Small detail, but it makes the callouts feel like you're actually typing them. The only thing that gives it away is that you're moving and can't actually be typing at the same time.
-
+Every click picks a random variation. In r4 I added no-repeat logic — it tracks the last sent index so you never get the same phrase twice in a row. Makes the callouts feel like you're actually typing them. The only tell is that you're mid-pull and can't possibly be at the keyboard.
 
 ---
 
 ## The Settings Panel
 
-The settings panel ended up being the biggest piece of the addon. It covers:
+The settings panel ended up bigger than the addon itself:
 
 - **Overlay**: width, background opacity, content opacity, lock position, frame layer
 - **Minimap**: show/hide toggle, reset position
-- **Pull timers**: checkboxes for 5s/10s/15s/20s/30s durations
-- **Messages**: add new messages, reorder with up/down buttons, hide toggle, delete with confirmation
+- **Pull timers**: checkboxes for 5s/10s/15s/20s/30s
+- **Messages**: add, reorder, hide, delete with confirmation
 
-Everything scrolls, so it doesn't matter how many messages you add. Each message row has inline controls to move it up, move it down, hide it from the overlay without deleting, or remove it entirely.
+Everything scrolls. Each message row has inline controls — move up, move down, hide from overlay without deleting, or nuke it.
 
 ---
 
 ## Smart Channel Detection
 
-One thing I wanted to get right was making the buttons "just work" regardless of group state. Left-click auto-detects the right channel — raid chat if you're in a raid, party chat if you're in a party, say if you're solo. Right-click always attempts a raid warning, but gracefully falls back — if you're not in a raid it sends to party, if you're not leader or assistant it sends to regular raid chat.
+The buttons just work regardless of group state. Left-click auto-detects — raid chat, party chat, or say. Right-click attempts a raid warning but falls back gracefully. Not in a raid? Party. Not leader or assistant? Regular raid chat.
 
-The Ready Check button takes this further: it only appears when you're group leader or assistant. Promote someone else to leader? The button disappears instantly.
+The Ready Check button only shows when you're leader or assistant. Promote someone else? It disappears instantly.
 
 ---
 
 ## Four Releases in One Day
 
-CommanderText went from nothing to r4 in a single day:
+Nothing to r4 in a single day:
 
 - **1.0.0**: Core overlay with message buttons and pull timers
-- **r2**: Full settings panel with sliders, message management, dynamic pull timer configuration
-- **r3**: Minimap button improvements (middle-click hide, right-click settings), settings footer with CurseForge link
-- **r4**: Two new default messages with funny variations, no-repeat randomization
+- **r2**: Full settings panel — sliders, message management, pull timer config
+- **r3**: Minimap button polish (middle-click hide, right-click settings)
+- **r4**: New default messages, no-repeat randomization
 
-Each release was a clean increment. The settings panel in r2 was the big one. The later releases were small quality-of-life improvements that came from actually using the addon while grinding dungeons.
+r2 was the heavy lift. Everything after that came from actually using the addon while grinding dungeons.
 
 ---
 
 ## The Result
 
-[**CommanderText**](https://www.curseforge.com/wow/addons/commandertext) is a small addon that does one thing well. It sits in the corner of my screen during dungeon runs and saves me from typing the same callouts over and over. The random message pools make it feel natural, and the settings panel gives enough control without overcomplicating things.
+[**CommanderText**](https://www.curseforge.com/wow/addons/commandertext) does one thing well. It sits in the corner during dungeon runs and saves me from typing the same callouts fifty times a night. The message pools make it feel natural, and the settings panel gives enough control without bloating a 1,600-line addon.
 
 Sometimes the right addon is the one that replaces a keyboard with a button.

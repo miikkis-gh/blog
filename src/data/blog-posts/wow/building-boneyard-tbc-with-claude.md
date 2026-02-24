@@ -5,22 +5,20 @@ publishDate: 17 Feb 2026
 description: How I used Claude Code and the Mechanic development hub to build BoneyardTBC — a guild management addon for WoW TBC Classic Anniversary Edition.
 ---
 
-# Building a WoW TBC Classic Addon with Claude Code and Mechanic
-
-I recently built [**BoneyardTBC**](https://www.curseforge.com/wow/addons/boneyardtbc), a guild management addon for World of Warcraft TBC Classic Anniversary Edition, using [Claude Code](https://claude.ai/code) as my AI pair programmer and a custom development hub called [**Mechanic**](https://github.com/Falkicon/Mechanic) to streamline the feedback loop. This is the story of how that went.
+[**BoneyardTBC**](https://www.curseforge.com/wow/addons/boneyardtbc) is a guild management addon for WoW TBC Classic Anniversary Edition. GearScore tracking, a bulletin board, a dungeon optimizer, officer analytics. I built it with [Claude Code](https://claude.ai/code) and [**Mechanic**](https://github.com/Falkicon/Mechanic) as the development backbone.
 
 ---
 
-## What Is BoneyardTBC?
+## What It Does
 
-BoneyardTBC is a WoW addon that gives guilds better visibility into their own roster. It tracks:
+BoneyardTBC gives guilds visibility into their own roster:
 
-- **GearScore** for every guild member (both addon users and non-users via silent background inspection)
-- **Bulletin Board** — a guild-wide in-game announcement system with timers
-- **DungeonOptimizer** — a route planner that tracks rep grind progress across TBC heroics and raids
+- **GearScore** for every guild member — addon users and non-users alike (silent background inspection)
+- **Bulletin Board** — guild-wide in-game announcements with timers
+- **DungeonOptimizer** — route planner that tracks rep grind progress across TBC heroics and raids
 - **Officer Analytics** — weekly activity charts and GearScore progression graphs
 
-The addon talks to itself over WoW's addon message channel (`GUILD`), so data propagates across all guild members who have it installed. Non-addon users get their GearScore populated silently whenever someone inspects them.
+The addon syncs over WoW's `GUILD` addon message channel. Everyone with it installed shares data automatically. Don't have the addon? Your GearScore still gets populated whenever someone inspects you.
 
 ---
 
@@ -28,102 +26,91 @@ The addon talks to itself over WoW's addon message channel (`GUILD`), so data pr
 
 ### Mechanic
 
-[**Mechanic**](https://github.com/Falkicon/Mechanic) is a local development hub I built alongside the addon. It consists of:
+[**Mechanic**](https://github.com/Falkicon/Mechanic) is a dev hub for WoW addon development. Python CLI, MCP server, web dashboard, and a sandbox for running unit tests without launching the game.
 
-- A **Python CLI** (`mechanic`) for linting, formatting, testing, and releasing addons
-- An **MCP server** that exposes all of those tools to Claude Code directly
-- A **dashboard** (web UI) that shows in-game errors, console output, and test results in real time
-- A **sandbox** for running Busted unit tests against WoW API stubs without launching the game
-
-The key feature is the **SavedVariables bridge** — Mechanic watches for WoW's SavedVariables files to update after a `/reload`, then parses them and surfaces errors and `print()` output in the dashboard. This closes the feedback loop between code changes and in-game results.
+The killer feature is the **SavedVariables bridge**. Mechanic watches WoW's SavedVariables files after a `/reload`, parses them, and surfaces errors and `print()` output in the dashboard. That closes the loop between writing code and seeing what it does in-game.
 
 ### Claude Code
 
-Claude Code acted as my pair programmer throughout. Because Mechanic exposes tools via MCP, Claude could:
+Claude Code did the actual coding. With Mechanic exposed via MCP, Claude could:
 
-- Search the WoW API database (`api.search`) to find the right function signatures
-- Lint code (`addon.lint`) with Luacheck without leaving the conversation
+- Look up TBC API signatures (`api.search`)
+- Lint code (`addon.lint`) with Luacheck mid-conversation
 - Run unit tests (`sandbox.test`) and see failures inline
-- Read in-game error output (`addon.output`) after I confirmed a `/reload`
+- Read in-game errors (`addon.output`) after a `/reload`
 
-The development loop looked like this:
+The loop:
 
-1. Describe a feature to Claude
-2. Claude reads the relevant files, proposes an implementation
-3. I approve, Claude edits the files
-4. I `/reload` in WoW and tell Claude it's done
-5. Claude calls `addon.output` to read errors and console logs
-6. Repeat
+1. Describe a feature
+2. Claude reads the files, writes the code
+3. I `/reload` in WoW
+4. Claude reads the errors itself and fixes them
+5. Repeat
+
+No copy-pasting errors. No switching between terminal and game. Claude sees everything through Mechanic.
 
 ---
 
-## Interesting Technical Challenges
+## The Hard Parts
 
-### TBC Classic API Differences
+### TBC Classic API Surface
 
-TBC Classic Anniversary Edition runs on a different API surface than retail WoW. Many C_* namespaced APIs don't exist or behave differently. Early on I had to:
+TBC Classic Anniversary runs a completely different API surface from retail. Many `C_*` namespaces don't exist. I had to:
 
-- Clone the `Gethe/wow-ui-source` repository on the `classic_anniversary` branch
-- Parse the FrameXML source into a local API database (3,459 TBC APIs)
-- Generate Luacheck stubs and sandbox stubs from that database
+- Clone `Gethe/wow-ui-source` on the `classic_anniversary` branch
+- Parse the FrameXML into a local API database (3,459 TBC APIs)
+- Generate Luacheck stubs and sandbox stubs from that
 
-This meant Claude was always searching against TBC-accurate API documentation, not retail.
+After that, Claude searched against TBC-accurate docs instead of retail.
 
-### Silent Inspection Tracking
+### Silent Inspection
 
-One of the more interesting features was populating roster GearScore for guild members who don't have the addon. The solution:
+Populating GearScore for guild members who don't have the addon was the interesting problem. The approach:
 
-- Hook the `INSPECT_READY` event whenever the WoW inspect frame opens
-- Verify the inspected target is a guild member using `GetGuildRosterInfo()` (not just guild name — connected realms share a channel)
-- Calculate GearScore from the equipped item data silently in the background
-- Broadcast the result to all other addon users via the `GUILD` addon message channel
+- Hook `INSPECT_READY` when the inspect frame opens
+- Verify the target is a guild member via `GetGuildRosterInfo()` — not just guild name, because connected realms share a channel
+- Calculate GearScore from equipped items silently
+- Broadcast to all addon users over the `GUILD` channel
 
-The tricky part was realm name normalization. On connected realms, player names include a suffix like `Pensatankki-Spineshatter`. Every lookup needed to strip the realm before matching against roster keys.
+The annoying part was realm names. Connected realms give you names like `Pensatankki-Spineshatter`. Every lookup had to strip the realm suffix before matching roster keys.
 
 ### Unit Testing Without WoW
 
-WoW addons normally require the game client to run. Mechanic's sandbox solves this with generated API stubs and a Busted test runner. By the end of the project, BoneyardTBC had:
+WoW addons normally need the game client to run. Mechanic's sandbox fakes it with generated API stubs and a Busted test runner.
 
-- **37 unit tests** for the core addon (GearScore, Sync)
-- **94 unit tests** for DungeonOptimizer (Optimizer, Sync, Tracker, Utils)
+Final count: **37 tests** for the core addon, **94 tests** for DungeonOptimizer. The full suite runs in seconds and catches regressions before they touch the game.
 
-Running the full suite takes a few seconds and catches regressions before they ever hit the game.
+### Keeping Claude Oriented
 
-### Keeping Claude in Context
+The project grew to multiple modules — `Core.lua`, `GearScore.lua`, `Sync.lua`, `Inspection.lua`, `BulletinBoard.lua`, `AddonDetection.lua`, plus a UI layer and the DungeonOptimizer companion addon.
 
-The project grew to multiple modules: `Core.lua`, `GearScore.lua`, `Sync.lua`, `Inspection.lua`, `BulletinBoard.lua`, `AddonDetection.lua`, plus a full UI layer and a companion addon (DungeonOptimizer).
+Two things kept Claude from getting lost across sessions:
 
-To keep Claude oriented across sessions I maintained two things:
-
-- **`ARCHITECTURE.md`** — a 782-line living document describing every module, its responsibilities, data flow, and message protocols
-- **`MEMORY.md`** — a persistent memory file in the Claude Code project that tracked version history, known patterns, and architectural decisions
-
-Claude reads these at the start of sessions and stays coherent across days of work.
+- **`ARCHITECTURE.md`** — 782 lines covering every module, data flow, and message protocol
+- **`MEMORY.md`** — Claude Code's persistent memory tracking version history and architectural decisions
 
 ---
 
-## What Worked Well
+## What Worked
 
-**The MCP feedback loop** was the biggest win. Instead of switching between a terminal, a text editor, and the game, everything flowed through the conversation. Claude would lint, test, and check output without me having to copy-paste anything.
+**The MCP loop.** Everything flowed through the conversation. Claude linted, tested, and read output without me relaying anything.
 
-**Incremental versioning** helped too. Each release (r7 through r10) introduced one or two features, with tests added before implementation. This kept the codebase clean and caught regressions early.
+**Incremental releases.** Each version (r7 through r10) added one or two features with tests first. Small steps, clean codebase.
 
-**Separate SavedVariables** for the optional DungeonOptimizer companion addon was the right call. It meant the core addon worked standalone and the companion could be installed or removed without touching core data.
+**Separate SavedVariables** for DungeonOptimizer. The core addon works standalone. Install or remove the companion without touching core data.
 
 ---
 
-## What Was Harder Than Expected
+## What Didn't
 
-**In-game UI debugging** is still painful. Lua errors in WoW surface as cryptic one-liners, and the Mechanic dashboard can only show what gets logged. Taint errors (where protected UI code gets accidentally called from addon code) are especially subtle — they often manifest as silent failures rather than visible errors.
+**In-game UI debugging is still awful.** Lua errors in WoW are cryptic one-liners. Taint errors are worse — protected UI code gets called from addon code and fails silently. No error, no log. Just nothing happening.
 
-**TBC API coverage gaps** occasionally bit us. Some APIs listed in the FrameXML source weren't actually callable in the Anniversary client, or had different signatures. The only reliable check is trying it in-game.
+**TBC API gaps.** Some APIs in the FrameXML source aren't actually callable in the Anniversary client, or have different signatures. The only way to know is to try it in-game and watch it break.
 
 ---
 
 ## The Result
 
-[**BoneyardTBC**](https://www.curseforge.com/wow/addons/boneyardtbc) is running in production for my guild on the Spineshatter-EU realm. The GearScore leaderboard, bulletin board, and officer analytics tabs are all actively used.
+[**BoneyardTBC**](https://www.curseforge.com/wow/addons/boneyardtbc) runs in production for my guild on Spineshatter-EU. GearScore leaderboard, bulletin board, officer analytics — all actively used.
 
-The whole thing was built in roughly one week of evening sessions — much faster than I would have managed alone, and with a higher test coverage than any addon I've written before.
-
-If you're interested in the toolchain, [**Mechanic**](https://github.com/Falkicon/Mechanic) is the piece that made this possible. The combination of an in-game error bridge, a local API database, and MCP tool exposure to Claude turned addon development from a slow trial-and-error process into something that actually resembles normal software development.
+Built in one week of evening sessions. Zero prior Lua knowledge. Higher test coverage than any addon I've written before. [**Mechanic**](https://github.com/Falkicon/Mechanic) made it possible — an error bridge, a correct API database, and MCP tools turning WoW addon dev into something that resembles actual software engineering.

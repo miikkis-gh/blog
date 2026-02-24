@@ -53,9 +53,9 @@ One problem: **Mechanic was built for retail** (Interface 120001). I was on TBC 
 
 ### Finding the Right FrameXML
 
-Mechanic has `api.download` to pull FrameXML from [Townlong Yak](https://www.townlong-yak.com/framexml). Retail only. No TBC section.
+Mechanic has `api.download` to pull FrameXML from [Townlong Yak](https://www.townlong-yak.com/framexml). Claude ran it, populated the database — with retail APIs. Townlong Yak only hosts retail builds. No TBC section. So now I had a nice searchable database full of wrong answers.
 
-I found [Gethe's `wow-ui-source`](https://github.com/Gethe/wow-ui-source) on GitHub — a community archive of FrameXML for every client variant. The trick was the branch name. No `tbc` branch, no `bcc`. TBC Classic Anniversary lives on `classic_anniversary` — FrameXML 2.5.5, 191 Blizzard addons.
+I pointed Claude to [Gethe's `wow-ui-source`](https://github.com/Gethe/wow-ui-source) on GitHub — a community archive of FrameXML for every client variant. The trick was the branch name. No `tbc` branch, no `bcc`. TBC Classic Anniversary lives on `classic_anniversary` — FrameXML 2.5.5, 191 Blizzard addons.
 
 Cloned it, pointed Mechanic's populator at it. **3,459 TBC-accurate APIs** replaced the retail database. I also had to yank `C_Engraving` (26 APIs) and `C_Seasons` (2 APIs) — Season of Discovery leftovers that leaked into the Anniversary client's shared codebase.
 
