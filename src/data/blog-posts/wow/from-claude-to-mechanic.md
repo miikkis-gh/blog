@@ -5,122 +5,106 @@ publishDate: 18 Feb 2026
 description: How I went from writing WoW addons with just Claude Code and no feedback loop to discovering Mechanic and building a proper development pipeline for TBC Classic.
 ---
 
-# From Blind Reloads to a Real Development Pipeline
-
-I started making WoW addons with nothing but Claude Code and a development folder. No linter, no test framework, no version control, no API reference. Claude Code could read and write the addon files directly — that part was fine. The problem was everything else: Claude had no way to see what happened after a `/reload` in WoW, no way to look up whether an API actually existed in TBC Classic, and no way to run tests. I was the bridge for all of that.
-
-A couple of weeks later I was building new addons from scratch in single evening sessions. This is the story of what changed in between, and the archaeological evidence I found in my own codebase when I went looking for traces of that early workflow.
+I started making WoW addons with Claude Code and a folder. No linter. No tests. No version control. No API reference. Claude could read and write my files — that part worked. The problem was everything after that. Claude was blind. It couldn't see what happened after a `/reload`, couldn't verify if an API existed in TBC Classic, couldn't run a single test. I was the eyes, the ears, and the error log.
 
 ---
 
 ## The Pure-Claude Code Era
 
-My first addon was **BoneyardTBC** — a guild management tool for TBC Classic Anniversary Edition. GearScore calculation, guild roster sync, a leaderboard. The earliest revisions (r1 through r4, around Feb 10) were built entirely through Claude Code sessions.
+My first addon was **BoneyardTBC** — guild management for TBC Classic Anniversary. GearScore, roster sync, a leaderboard. The first revisions (r1–r4, around Feb 10) were pure Claude Code sessions.
 
-Claude Code could read my addon files and write Lua directly — no manual copy-pasting of code. But the development loop still had a massive blind spot:
+The loop looked like this:
 
-1. Describe a feature to Claude Code
-2. Claude writes the `.lua` files directly
+1. Describe a feature to Claude
+2. Claude writes the `.lua` files
 3. `/reload` in WoW
-4. Something breaks — I read the error in chat and describe it back to Claude
-5. Claude has no idea if the API it just used actually exists in TBC Classic
-6. Claude suggests a fix based on what it thinks the API surface looks like
-7. Repeat from step 3
+4. Something breaks — I read the error and describe it back
+5. Claude has no idea if the API it used even exists in TBC
+6. Claude guesses a fix
+7. Back to step 3
 
-The code writing was fast. The feedback was slow. Claude couldn't see in-game errors, couldn't verify API signatures against TBC Classic's actual surface, couldn't run any tests. Every error had to flow through me. And Claude's knowledge of WoW APIs is a mix of retail and Classic — it would confidently use `C_Spell.GetSpellInfo()` (retail only) when it should have used the old global `GetSpellInfo()` (which is what TBC has). I wouldn't know until the `/reload` failed.
+Code writing was fast. Everything else was slow.
 
-There was no version control — the addon lives as loose files in a development folder with no `.git` directory. No linting to catch issues before they hit the game. No test framework. Just Claude writing code and me reporting back what happened.
+Claude's WoW API knowledge is a cocktail of retail and Classic. It would confidently drop `C_Spell.GetSpellInfo()` — retail only — when TBC uses the old global `GetSpellInfo()`. I wouldn't find out until the `/reload` blew up.
+
+No git either. Just loose files in a folder. When your dev process is "write, reload, describe error," version control isn't top of mind.
 
 ---
 
 ## The Traces Left Behind
 
-When I recently went digging through my files looking for evidence of this early workflow, the traces were everywhere.
+I went digging through my files recently. The archaeological evidence was everywhere.
 
-**Phase plan documents sitting inside the addon folder.** BoneyardTBC has three files: `ATTENDANCE_PHASE1.md`, `ATTENDANCE_PHASE2.md`, `ATTENDANCE_PHASE3.md` — a multi-phase plan for building an attendance tracking feature. Claude Code broke the feature into phases and saved the plans next to the code so the next session could pick up where it left off. No project memory yet, no skills, no reference library — just markdown files as a way to carry knowledge between sessions.
+**Phase plans next to the code.** BoneyardTBC has `ATTENDANCE_PHASE1.md`, `PHASE2`, `PHASE3` — Claude broke a feature into phases and saved the plans alongside the Lua. No project memory, no skills, no reference library. Just markdown as a poor man's session persistence.
 
-**A frozen architecture document.** `ARCHITECTURE.md` is 782 lines long and still says "Version: r7" on line 32. Claude generated it as a snapshot of the system at that point in time. Once the development workflow shifted, nobody went back to update it. It's a fossil from a specific moment.
+**A frozen architecture doc.** `ARCHITECTURE.md`, 782 lines, still says "Version: r7" on line 32. A fossil. Claude generated it, the workflow shifted, and nobody ever touched it again.
 
-**A 973-line UI reference guide.** `Beautiful_Addon_UI_Design_for_20505.md` is a comprehensive document covering every frame-level UI technique available in TBC Classic's modern client — `BackdropTemplate` patterns, texture paths, animation groups, preset backdrop tables. Claude Code researched this from the web when I wanted to understand what was possible for addon interfaces on Interface 20505. It ended up as a reference document saved in the development folder.
+**A 973-line UI reference guide.** `Beautiful_Addon_UI_Design_for_20505.md` — every frame-level UI technique in TBC's modern client. `BackdropTemplate` patterns, texture paths, animation groups. Claude researched this from the web when I wanted to know what was possible on Interface 20505. It landed in the dev folder and stayed there.
 
-**No git anywhere.** None of my addons have their own repositories. They're all loose folders. When your development process is "write code, reload, describe errors," and each session starts mostly fresh, version control isn't the first thing you think about.
+**No git anywhere.** Not a single `.git` directory across any of my addons. All loose folders. That's what happens when every session starts fresh and your feedback loop runs through a human.
 
 ---
 
-## Discovering Mechanic — And Realizing It Was Built for Retail
+## Discovering Mechanic — Built for the Wrong Client
 
-At some point I found [**Mechanic**](https://github.com/Falkicon/Mechanic) — a development hub for WoW addon developers built by Falkicon. It has a Python CLI, an MCP server that exposes tools to AI coding assistants, a web dashboard, and a sandbox for running unit tests without launching the game.
+I found [**Mechanic**](https://github.com/Falkicon/Mechanic) — a dev hub for WoW addon developers by Falkicon. Python CLI, MCP server, web dashboard, sandbox for unit tests without launching the game.
 
-There was one problem: **Mechanic was built for retail WoW** (Interface 120001). I was building for TBC Classic Anniversary Edition (Interface 20505). These are very different API surfaces. Retail has `C_Spell.GetSpellInfo()`, TBC has the old global `GetSpellInfo()`. Retail has `C_Container`, TBC has direct bag functions. Entire namespaces like `C_ClassTalents`, `C_Traits`, `C_DelvesUI` don't exist in TBC. Using them would just silently fail or throw errors in-game.
-
-The API database that ships with Mechanic — the thing Claude uses to look up function signatures — was populated from retail FrameXML. Every `api.search` result was potentially wrong for my client.
+One problem: **Mechanic was built for retail** (Interface 120001). I was on TBC Classic Anniversary (Interface 20505). Completely different API surfaces. Retail has `C_Spell.GetSpellInfo()`, TBC has the global `GetSpellInfo()`. Retail has `C_Container`, TBC has direct bag functions. Entire namespaces — `C_ClassTalents`, `C_Traits`, `C_DelvesUI` — flat out don't exist. The API database Mechanic ships with was populated from retail FrameXML. Every lookup was potentially wrong.
 
 ### Finding the Right FrameXML
 
-Mechanic has an `api.download` command that pulls FrameXML source from [Townlong Yak](https://www.townlong-yak.com/framexml), a community site that archives Blizzard's UI source after each patch. But Townlong Yak only hosts retail builds. There's no TBC Classic section.
+Mechanic has `api.download` to pull FrameXML from [Townlong Yak](https://www.townlong-yak.com/framexml). Retail only. No TBC section.
 
-After some digging I found [Gethe's `wow-ui-source`](https://github.com/Gethe/wow-ui-source) repository on GitHub — a community effort that archives FrameXML for every WoW client variant. The key was finding the right branch. There's no `tbc` or `bcc` branch. The TBC Classic Anniversary client lives on the `classic_anniversary` branch, which contains FrameXML version 2.5.5 with 191 Blizzard addons.
+I found [Gethe's `wow-ui-source`](https://github.com/Gethe/wow-ui-source) on GitHub — a community archive of FrameXML for every client variant. The trick was the branch name. No `tbc` branch, no `bcc`. TBC Classic Anniversary lives on `classic_anniversary` — FrameXML 2.5.5, 191 Blizzard addons.
 
-I cloned that branch into `_dev_/framexml/2.5.5/` and pointed Mechanic's API populator at it. The result: **3,459 TBC-accurate APIs** replacing the retail database. I also had to manually remove `C_Engraving` (26 APIs) and `C_Seasons` (2 APIs) because those are Season of Discovery features that leaked into the Anniversary client's shared codebase.
+Cloned it, pointed Mechanic's populator at it. **3,459 TBC-accurate APIs** replaced the retail database. I also had to yank `C_Engraving` (26 APIs) and `C_Seasons` (2 APIs) — Season of Discovery leftovers that leaked into the Anniversary client's shared codebase.
 
-From that point on, when Claude ran `api.search` to find how to do something, it got TBC-correct answers. No more retail APIs sneaking into my addon code and breaking on `/reload`.
+After that, `api.search` gave TBC-correct answers. No more retail ghosts sneaking into my code.
 
 ### The MCP Bridge
 
-The bigger insight was the **MCP integration**. Mechanic exposes its tools as an MCP server, which means Claude Code can call them directly during a session:
+This was the real unlock. Mechanic exposes tools as an MCP server, so Claude Code calls them directly mid-session:
 
-- **`addon.output`** — read in-game errors, console logs, and test results after a `/reload`
-- **`addon.lint`** — run Luacheck on addon code without leaving the conversation
-- **`sandbox.test`** — execute Busted unit tests against WoW API stubs
-- **`api.search`** — look up WoW API signatures from the TBC-accurate database
+- **`addon.output`** — reads in-game errors and logs after a `/reload`
+- **`addon.lint`** — runs Luacheck without leaving the conversation
+- **`sandbox.test`** — executes Busted unit tests against WoW API stubs
+- **`api.search`** — looks up function signatures from the TBC database
 
-The development loop got dramatically tighter:
+The new loop:
 
-1. Describe a feature to Claude Code
-2. Claude reads the relevant files, writes the code
-3. I `/reload` in WoW and confirm it's done
-4. Claude calls `addon.output` and reads the errors directly — no need for me to relay them
-5. Claude fixes the issues and we go again
+1. Describe a feature
+2. Claude reads the files, writes the code
+3. I `/reload` in WoW
+4. Claude calls `addon.output` and reads the errors itself
+5. Claude fixes them. Done.
 
-The difference sounds small, but it changed everything. Claude could now see the actual Lua errors, search for correct TBC API signatures, lint the code, and run tests — all within the same session, without me acting as the go-between.
+I stopped being the error relay. Claude could see the Lua errors, look up correct APIs, lint the code, and run tests — all in one session.
 
 ---
 
 ## Building the Pattern Library
 
-The other thing that made a huge difference was studying how production addons actually work. I copied several well-known addons into my development folder and had Claude analyze their source code to extract patterns.
+I copied well-known addons into my dev folder and had Claude tear them apart. Extract patterns, document techniques, figure out how the pros do it.
 
-This turned into a **reference library**: 32 addon source analyses producing 224 pattern documents (74,000 lines), organized into a cookbook of 27 topic guides. Combat log parsing. Tooltip hooking. Map pin rendering. Secure frame handling. Data architecture. The works.
+32 addon analyses. 224 pattern documents. 74,000 lines. Organized into 27 topic guides — combat log parsing, tooltip hooking, map pin rendering, secure frame handling, data architecture.
 
-The pattern library is still evolving — I started with analysis of a handful of addons and have been expanding it over the last couple of days into a full cookbook with 27 topic guides. When Claude needs to implement a feature, it can look up how production addons solved the same problem instead of generating Lua from first principles.
-
----
-
-## When the Pipeline Started Working
-
-The difference became obvious around mid-February. Features that used to take multiple sessions of back-and-forth — describe the error, explain the context, try again — started landing in a single pass. Claude could look up the correct TBC API, write the code, and after my `/reload` it could read the errors itself and fix them without me explaining anything.
-
-Building a new addon went from a strenuous back-and-forth to something that flowed naturally. The pipeline handled all the friction that used to drain the energy out of it.
-
-The contrast with the early days was clear. What used to be a draining cycle of blind reloads and relaying errors had become a smooth loop where Claude could see and fix problems on its own.
+Instead of generating Lua from first principles, Claude now looks up how DBM or Details! solved the same problem. Turns out production code is a better teacher than a language model's imagination.
 
 ---
 
 ## What I Learned
 
-**The bottleneck was never the code writing.** Claude Code could always write Lua files directly. The bottleneck was the feedback loop — Claude couldn't see what happened in the game, didn't know which APIs actually existed in TBC Classic, and couldn't run tests. I was the only bridge between the code and the runtime, and that bridge was slow and lossy.
+**The bottleneck was never the code.** Claude could always write Lua. The bottleneck was the feedback loop — blind to errors, no API verification, no tests. I was the only bridge between the code and the game, and I was a slow, lossy bridge.
 
-**Reference material compounds.** That 973-line UI guide I wrote early on? It's still useful. The pattern library built from studying 32 addons? It makes every new feature faster because Claude starts from a proven approach instead of guessing. The investment in building good reference material pays off across every future session.
+**Reference material compounds.** That 973-line UI guide? Still useful. The pattern library from 32 addons? Every new feature is faster because Claude starts from proven patterns instead of hallucinating Lua.
 
-**You don't need to understand every line.** I'm not a Lua expert. I can read it, I understand the patterns, and I can describe what I want clearly. Claude handles the implementation details — the event registration order, the edge cases in connected-realm name normalization, the math in GearScore formulas. My job is knowing what the addon should do and testing that it actually does it.
+**You don't need to understand every line.** I'm not a Lua expert. I can read it, I know the patterns, and I can describe what I want. Claude handles event registration order, connected-realm normalization edge cases, GearScore math. My job is knowing what the addon should do and confirming it does.
 
-**Tools matter more than talent.** The difference between my first week (one addon, no tests, constant API errors) and two weeks later (multiple addons, 131 unit tests across the suite) wasn't skill improvement. It was tooling. The MCP bridge, the TBC API database, the pattern library, the sandbox test runner — each one removed a friction point, and the compound effect was dramatic.
+**Tools beat talent.** Day one: one addon, no tests, constant API errors. One week later: six addons, 131 unit tests. That wasn't me getting better at Lua. That was tooling.
 
 ---
 
 ## The Numbers
-
-For the curious, here's where things stand:
 
 | Addon | Lines of Lua | Unit Tests |
 |-------|-------------|------------|
@@ -132,6 +116,4 @@ For the curious, here's where things stand:
 | DisenchantValue | 559 | — |
 | **Total** | **28,044** | **131** |
 
-Plus 782 lines of architecture documentation, three phase plan documents, a UI reference guide, and a pattern library that I keep adding to.
-
-All built with Claude, starting from zero Lua knowledge, in about two weeks of evening sessions.
+28,000 lines of Lua, 131 tests, zero prior Lua knowledge, one week of evening sessions. The pipeline did the heavy lifting.
